@@ -1,5 +1,5 @@
 # TokenEngineering
-Repository for LTF token modelling and engineering
+This is an initial model of the LTF DAO concept. In the words of Trent McConaghy it is essentially "a DAO dedicated to making money as a services firm."
 
 ## To run the notebook:
 First clone the repo locally and cd into it.  
