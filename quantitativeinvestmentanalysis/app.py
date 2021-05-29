@@ -43,7 +43,7 @@ accent_color = "#00286e"
 # ).servable()
 
 
-from QIA import InterestRate
+from qia import InterestRate
 ir = InterestRate()
 pane = pn.Column(ir, "Interest Rate:", ir.interest_rate)
 # pane.servable()
