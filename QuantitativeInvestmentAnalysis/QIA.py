@@ -73,7 +73,7 @@ interest_rate_params = {
     'maturity_premium': 0,
 }
 
-r = InterestRate(r)
+# r = InterestRate()
 
 
 # class CashFlow(pm.Parameterized):

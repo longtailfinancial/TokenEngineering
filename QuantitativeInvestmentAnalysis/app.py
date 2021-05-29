@@ -45,7 +45,7 @@ accent_color = "#00286e"
 
 from QIA import InterestRate
 ir = InterestRate()
-pane = pn.Pane(ir)
+pane = pn.Column(ir, "Interest Rate:", ir.interest_rate)
 # pane.servable()
 pn.template.FastListTemplate(
     site="Quantitative Investment Analysis",
