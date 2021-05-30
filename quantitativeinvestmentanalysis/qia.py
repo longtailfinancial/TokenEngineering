@@ -79,7 +79,7 @@ class CashFlow(pm.Parameterized):
         doc="""Present value of the investment.""")
 
     annuity = pm.Number(
-        0, bounds=(0, None), step=1, precedence=1,
+        10, bounds=(0, None), step=1, precedence=1,
         doc="""A finite set of level sequential cash flows.""")
 
     perpetuity = pm.Boolean(
@@ -97,37 +97,62 @@ class CashFlow(pm.Parameterized):
     def effective_rate(self):
         return self.interest_rate.interest_rate()
 
-    def future_lump_value(self):
-        return self.present_value * (1 + self.interest_rate.interest_rate())**self.N
+    def _future_lump_value(self, t):
+        return self.present_value * (1 + self.interest_rate.interest_rate())**t
 
-    def future_annuity_value(self):
+    def future_lump_value(self):
+        return self._future_lump_value(self.N)
+
+    def _future_annuity_value(self, t):
         if self.perpetuity:
             return self.present_annuity_value() / self.present_value_factor()
         else:
-            return self.annuity * ((1 + self.effective_rate())**self.N - 1) / self.effective_rate()
+            return self.annuity * ((1 + self.effective_rate())**t - 1) / self.effective_rate()
+
+    def future_annuity_value(self):
+        return self._future_annuity_value(self.N)
+
+    def _present_value_factor(self, t):
+        return (1 + self.effective_rate())**(-t)
 
     def present_value_factor(self):
-        return (1 + self.effective_rate())**(-self.N)
+        return self._present_value_factor(self.N)
 
     def present_annuity_value(self):
         if self.perpetuity:
             return self.annuity / self.effective_rate()
-
         else:
             return self.future_annuity_value() * self.present_value_factor()
 
+    def _total_future_value(self, t):
+        return self._future_lump_value(t) + self._future_annuity_value(t)
+
     def total_future_value(self):
-        return self.future_lump_value() + self.future_annuity_value()
+        return self._total_future_value(self.N)
 
     def total_present_value(self):
         return self.present_value + self.present_annuity_value()
 
-    def growth_rate(self):
-        return (self.total_future_value() / self.total_present_value())**(1/self.N) - 1
+    def cash_flow(self):
+        cash_flow = pd.DataFrame([{
+                'Time Period':t,
+                'Lump Value': self._future_lump_value(t),
+                'Annuity Value': self._future_annuity_value(t),
+                'Total Value': self._total_future_value(t),
+            } for t in range(self.N+1)])
+        return cash_flow
+
+    def view_cash_flow(self):
+        cash_flow = self.cash_flow()
+        return cash_flow.hvplot.table()
+
+    def view_cash_flow_chart(self):
+        cash_flow = self.cash_flow()
+        return cash_flow.hvplot.line(x='Time Period', title="Cash Flow")
 
     @pm.depends('interest_rate.param')
     def view(self):
-        return pn.Column(
+        return pn.Row(pn.Column(
             "Effective Rate",
             self.effective_rate(),
             'Present Value Factor:',
@@ -142,10 +167,9 @@ class CashFlow(pm.Parameterized):
             self.total_future_value,
             'Total Present Value:',
             self.total_present_value,
-            'Growth Rate:',
-            self.growth_rate,
-        )
-
+        ),
+                      pn.Column(self.view_cash_flow, self.view_cash_flow_chart),
+                      )
 
 class CompoundingCashFlow(CashFlow):
     compound_periods = pm.Integer(
@@ -175,4 +199,51 @@ class ContinuousCompoundingCashFlow(CashFlow):
         return self.present_value * math.e**(self.interest_rate.interest_rate() * self.N)
 
 
+# Chapter 2 Discounted Cash Flow Operations
+
+
+"""
+2.0 Net Present Value and Internal Rate of Return
+
+There are three chief areas of financial decision-making in most businesses. 
+
+Capital Budgeting is the allocation of funds to relatively long-range projects
+or investements. 
+
+From the perspective of capital budgeting, a company is a portfolio of projects
+and investments. 
+
+Capital structure is the choice of long-term financing for the investments the
+company wants to make.
+
+Working Capital Management is the management of the company's short-term assets
+(such as inventory) and short-term liabilities (such as money owed to
+suppliers).
+
+2.1 Net Present Value and the Net Present Value Rule
+
+Net present value (NPV) describes a way to characterize the value of an
+investment, and the net present value rule is a method for choosing among
+alternative investments. 
+
+The net present value of an investment is the present value of its cash inflows
+minus the present value of its cash outflows. The word "net" in an NPV refers
+to subtracting the present value of the investments outflows (costs) from the
+present value of its inflows (benefits) to arrive at the net benefit.
+
+The steps in computing NPV and applying the NPV rule are as follows:
+1. Identify all cash flows associated with the investment - all inflows and outflows.
+2. Determine the appropriate discount rate or opportunity cost, r, for the investment project
+3. Using that discount rate, find the present value of each cash flow. (Inflows are positive, outflows are negative.)
+4. Sum all present values. The sum of the present values of all cash flows (inflows and outflows) is the investments net present value.
+5. Apply the NPV rule: if the investment's NPV is positive, an investor should undertake it; if the NPV is negative, the investor should not undertake it. If an investor must choose one project over another, they will choose the one with higher NPV.
+"""
+
+class NetPresentValue(pm.Parameterized):
+    cashflows = pm.ListSelector(default=[], objects=[])
+
+    def __init__(self, discount_rate: InterestRate, cash_flows: list, **params):
+        self.discount_rate = discount_rate
+        self.cash_flows = cash_flows
+        super(NetPresentValue, self).__init__(**params)
 
