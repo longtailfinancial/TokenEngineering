@@ -104,10 +104,10 @@ class CashFlow(pm.Parameterized):
         return self._future_lump_value(self.N)
 
     def _future_annuity_value(self, t):
+        value = self.annuity * ((1 + self.effective_rate())**t - 1) / self.effective_rate()
         if self.perpetuity:
-            return self.present_annuity_value() / self.present_value_factor()
-        else:
-            return self.annuity * ((1 + self.effective_rate())**t - 1) / self.effective_rate()
+            value += self.perpetuity_value()
+        return value
 
     def future_annuity_value(self):
         return self._future_annuity_value(self.N)
@@ -118,11 +118,14 @@ class CashFlow(pm.Parameterized):
     def present_value_factor(self):
         return self._present_value_factor(self.N)
 
+    def _present_annuity_value(self, t):
+        return self.annuity * ((1 -  1/(1+self.effective_rate())**t)/self.effective_rate())
+
     def present_annuity_value(self):
-        if self.perpetuity:
-            return self.annuity / self.effective_rate()
-        else:
-            return self.future_annuity_value() * self.present_value_factor()
+        return self._present_annuity_value(self.N)
+
+    def perpetuity_value(self):
+        return self.annuity / self.effective_rate()
 
     def _total_future_value(self, t):
         return self._future_lump_value(t) + self._future_annuity_value(t)
@@ -140,6 +143,7 @@ class CashFlow(pm.Parameterized):
                 'Annuity Value': self._future_annuity_value(t),
                 'Total Value': self._total_future_value(t),
             } for t in range(self.N+1)])
+        cash_flow['Cash Flow'] = cash_flow['Total Value'].diff().fillna(0)
         return cash_flow
 
     def view_cash_flow(self):
@@ -167,9 +171,8 @@ class CashFlow(pm.Parameterized):
             self.total_future_value,
             'Total Present Value:',
             self.total_present_value,
-        ),
-                      pn.Column(self.view_cash_flow, self.view_cash_flow_chart),
-                      )
+        ), pn.Column(self.view_cash_flow, self.view_cash_flow_chart),
+      )
 
 class CompoundingCashFlow(CashFlow):
     compound_periods = pm.Integer(
