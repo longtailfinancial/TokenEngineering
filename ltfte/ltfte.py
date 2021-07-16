@@ -20,30 +20,48 @@ class Sigmoid(pm.Parameterized):
 
     Attributes
     ----------
-    l : number
+    l : number that adjusts the y-axis scale 
         default=20.8, bounds=(0, 100)
-    s : number
+    s : number that adjusts the supply of tokens
         default=17, bounds=(1, 20)
-    m : number
+    m : number that adjusts the slope
         default=21e6, bounds=(1, 21e6)
-    k : number
+    k : number of tokens sold
         default=57300, bounds=(1, 1e5)
-    steps : Integer
+    steps : Integer 
         default=1000, bounds=(10, 10000)
-    zoom : number
+    zoom : number that affects the scale of the presented view
         default=0.03, bounds=(0.01, 1)
-    current_supply : number
+    current_supply : number modeling the current tokens in circulation
         default=10000
 
     Methods
     -------
-    x():
-        returns values for x axis scale based on m, zoom, steps.
-    
     f(x):
         Paramaterized Sigmoid Function.
 
-    TO BE CONTINUED    
+    x():
+        returns values for x axis scale based on m, zoom, steps.
+   
+    curve(x):
+        Returns a dataframe containing the supply and price based on the X values
+        supplied to f(x)
+
+    collateral(x):
+        Creates and returns the dataframe containing values that are less than the 
+        current token supply
+
+    view_curve():
+        Return a holoviews line plot modeling the relationship between the supply
+        and the price
+
+    view_collateral():
+        Returns a holoviews area plot that shows the relationship between the 
+        supply and price
+
+    view():
+        Returns the two previous views over layed
+
 
     """
 
@@ -60,7 +78,7 @@ class Sigmoid(pm.Parameterized):
         self.param['current_supply'].bounds = (1,self.m*self.zoom)
     
     def f(self, x):
-        """Paramaterized Sigmoid Function"""
+        """Parameterized Sigmoid Function"""
         self.param['current_supply'].bounds = (1,self.m*self.zoom)
         return self.k/(1+np.exp(-x*self.l/self.m+self.s))
 
@@ -90,6 +108,40 @@ class Sigmoid(pm.Parameterized):
 
 ### Multisigmoid
 class MultiSigmoid(Sigmoid):
+    """
+    A parameterized class to represent a Multi-Sigmoid curve that inherits 
+    all the methods and attributes from Sigmoid
+
+    Attributes
+    ----------
+
+    l : number that adjusts the y-axis scale 
+        default=20.8, bounds=(0, 100)
+
+    s : number that adjusts the supply of tokens
+        default=17, bounds=(1, 20)
+
+    m : number that adjusts the slope
+        default=21e6, bounds=(1, 21e6)
+
+    k : number of tokens sold
+        default=57300, bounds=(1, 1e5)
+
+    NOTE: Each of the additional Sigmoid have their own respective variables appropriately 
+          labeled with that curves number. (Ex: l2, s2, m2, k2)
+
+    Methods
+    -------
+    f2(x): Calculates the second Sigmoid curve fundamental function
+
+    f3(x): Calculates the third Sigmoid curve fundamental function
+
+    f4(x): Calculates the fourth Sigmoid curve fundamental function
+
+    f(x): Returns the sum of the original Sigmoid curve plus f2(), f3(), and f4()
+
+
+    """
     l2 = pm.Number(2, bounds=(0, 100), precedence=-1)
     s2 = pm.Number(5, bounds=(1,20), precedence=-1)
     m2 = pm.Number(5e4, bounds=(1, 21e6), step=50000, precedence=-1)
@@ -119,11 +171,43 @@ class MultiSigmoid(Sigmoid):
         return self.k4/(1+np.exp(-x*self.l4/self.m4+self.s4))
 
     def f(self, x):
+        """
+        The fundamental function for this class as it calls all the other functions
+        and returns the sum of their values.
+        """
         return super(MultiSigmoid, self).f(x) + self.f2(x) + self.f3(x) + self.f4(x)
 
 
 ### Augumented
 class Augmented(MultiSigmoid):
+    """
+    A parameterized class to model the Augmented MultiSigmoid bonding Curve. 
+
+    Attributes
+    ----------
+
+    reserve_rate: number that represents the reserve rate of the curve.
+                  default=0.2, bounds=(0, 1), step=0.01
+
+    NOTE: Inherits all previous attributes.
+
+
+    Methods
+    -------
+    curve(x):
+        Calculates and returns an Augmented bonding curve data frame that shows
+        the supply, price, minted  tokens, reserve, and funding of the curve as a whole
+
+    reserves():
+        Returns data frame of the collateral and includes the net gains of the curve 
+
+    view_collateral():
+        Returns a holoviews plot of the collateral against the curve
+
+    view_reserves():
+        Returns a data frame showing the sum of the reserves in regards to CAD
+
+    """
     reserve_rate = pm.Number(0.2, bounds=(0, 1), step=0.01)
     
     def curve(self, x):
@@ -154,6 +238,28 @@ class Augmented(MultiSigmoid):
 
 ### Smart
 class Smart(Augmented):
+    """
+    A parameterized class to model the Smart augmented MultiSigmoid bonding Curve. 
+
+    Attributes
+    ----------
+
+    reserve_power: The power at which the curves reserve ratio is calculated
+
+    NOTE: Inherits all previous attributes.
+
+    Methods
+    -------
+
+    collateral(x):
+        Creates and returns a data frame of the collateral against the curve and the 
+        selling curve.
+
+    curve(x):
+       Same as the curve function from earlier, but missing values are now filled with 
+       .bfill() from pandas 
+
+    """
     reserve_power = pm.Integer(4, bounds=(0,4))
     
     def __init__(self, **params):
