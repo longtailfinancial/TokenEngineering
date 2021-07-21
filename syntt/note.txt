@@ -1,0 +1,5 @@
+This is the Syntactical Tools directory,
+
+primarily for helping functions, decorators,
+and classes that aid our workflow but shouldn't
+be in our clients' codebases.
