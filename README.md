@@ -19,10 +19,75 @@
 
 
 
+<br>
+<font>
+A collection of tools, boilerplates, scripts, and functions often used in our
+Token Engineering and Software Engineering tasks.
+</font>
+
+<h2>Packages and Modules</h2>
+
+<h3>⠗ ltfte ⠺</h3>
+
+Longtail Financial Token Engineering tools.
+
+Usage:
+```python
+import tokenengi.ltfte
+or 
+from tokenengi import ltfte
+```
 
 
-This is an initial model of the LTF DAO concept. In the words of Trent McConaghy it is essentially "a DAO dedicated to making money as a services firm."
+[ NEED ASSISTANCE UPDATING THIS SECTION. ]
+
+<h3>⠗  ltfswe  ⠺</h3>
+
+Longtail Financial Software Engineering tools.
+
+**ltfswe** can be imported by the following lines.
+```python
+import tokenengi.ltswe
+or 
+from tokenengi import ltfswe
+```
+
+<h4>
+Contents:
+</h4>
 
 
-<!---- Sample comment to observe behaviour as a submodule, ignore this one guys -->
-<!---- Confirming behaviour twice, if the submodule to this repo is setup correctly, ltf-te-publishing should append this line -->
+***togglize*** - A decorator for Panel widget functions that gives you a toggle button to hide/unhide the widget. The decorator is able to accept two optional parameters — the button label (string), and the button color (string). By default, the default button label is "Hide / Unhide Widget" and the default button color is green.
+
+Currently it supports three colors: red, green, and blue.
+
+Usage:
+
+```python
+import panel as pn
+pn.extension()
+
+from tokenengi.ltfswe import togglize
+
+@togglize("Hide/Unhide Blue Square", "blue")
+def some_panel_widget():
+    return pn.pane.PNG('blue_square.png')
+```
+
+<br/>
+
+***clamp*** - A function that binds an int or float to a minimum or maximum value. 
+
+For example, if we clamped an int x to [0, 1000] and gave it a value of 1002, the int will remain at 1000. Inversely, if we assigned -2 to x, then x remains at 0.
+
+Usage:
+
+```python
+from tokenengi.ltfswe import clamp
+
+x = 1001
+clamp(x, 0, 1000)
+
+print(x)
+# X will be 1000.
+```
