@@ -15,11 +15,6 @@ def clamp(n, smallest: int=0, largest: int=1000) -> float:
 
 
 def togglize(toggle_name: str="Hide / Unhide Widget", color: str="green"):
-    '''
-    A tool so widgets can be hidden/unhidden
-    with a button, with the button name being the provided
-    argument to the decorator.
-    '''
 
     def decorator_function(original_function):
 
@@ -29,6 +24,7 @@ def togglize(toggle_name: str="Hide / Unhide Widget", color: str="green"):
             In this block are the boilerplate
             for the actual togglizer
             '''
+
             tog_color = {
               "green": "success",
               "red": "danger",
@@ -46,10 +42,11 @@ def togglize(toggle_name: str="Hide / Unhide Widget", color: str="green"):
                     what's being returned.
                     '''
 
-                    return original_function
+                    return original_function(*args)
+                    # return original_function   // This fails for class methods.
+                    # You have to return the function WITH its arguments
 
-                else:
-                    return None
+                return None
 
             sample_widget_plot = pn.Column(pn.Column(toggle), toggle_watch)
             return sample_widget_plot
@@ -58,3 +55,4 @@ def togglize(toggle_name: str="Hide / Unhide Widget", color: str="green"):
             return result
         return wrapper_function
     return decorator_function
+
