@@ -7,6 +7,11 @@ import param as pm
 import random
 import math
 import warnings
+import bokeh
+import plotly
+import plotly.express as px
+
+
 warnings.filterwarnings('ignore')
 hv.extension('bokeh')
 
@@ -422,3 +427,84 @@ class Corporate(Bonding):
     @pm.depends('current_supply', watch=True)
     def update_debt_bounds(self):
         self.param['debt'].bounds = (0,self.reserves()['funding'])
+
+
+class SineWave(pm.Parameterized):
+    '''
+    Tool for plotting Sine functions using Plotly and Python Panel
+    '''
+    y_intercept = pm.Number(0)
+    amplitude = pm.Number(1)
+    period = pm.Number(10)
+    plot_range = pm.Number(500)
+    rotation = pm.Number(0.7)
+
+    def __init__(self,
+                 y_intercept: float = 0,
+                 amplitude: float = 1.0,
+                 period: float = 10.0,
+                 plot_range: int = 500,
+                 rotation: float = 0.7):
+        super().__init__()
+        '''
+        Class can be instantiated with custom values, or also with no arguments.
+        Defaults are provided.
+        '''
+        self.y_intercept = y_intercept
+        self.amplitude = amplitude
+        self.period = period
+        self.plot_range = plot_range
+        self.rotation = rotation
+
+    def show_controls(self):
+        '''
+        This function is necessary in Jupyter Notebook
+        to display the adjustable parameters.
+        '''
+
+        return pn.Column(
+            self.param.y_intercept,
+            self.param.amplitude,
+            self.param.period,
+            self.param.rotation
+
+        )
+
+    def xy_cols(self):
+        '''
+        If we just want the two columns of the x and y
+        values, we call this function. Very useful for debugging
+        and if SineWave is to be used within another function.
+        '''
+        a = self.rotation
+        b = self.period
+        c = self.amplitude
+
+        # The limit of the Axis, since we're plotting discrete points.
+        t = np.linspace(0, self.plot_range, self.plot_range + 1)
+
+        x = np.cos(a)*(t/b) - np.sin(a) * np.sin(t/b) * c
+        y = np.sin(a)*t/b + np.cos(a)*np.sin(t/b) + self.y_intercept * c
+
+        return x, y
+
+    def data_frame(self):
+        '''
+        Same purpose as xy_cols, but if we want the data as a Pandas
+        Dataframe.
+        '''
+        x_col, y_col = self.xy_cols()
+        sine_dataframe = pd.DataFrame(zip(x_col, y_col), columns=['x', 'y'])
+
+        return sine_dataframe
+
+    def plot(self):
+        '''
+        Asks for the dataframe so it can be plotted.
+        Initially, everything was here. But coupling was so severe, so
+        I split everything into separate functions.
+        '''
+
+        sine_plot = self.data_frame()
+        return px.line(sine_plot, x="x", y=['y'])
+
