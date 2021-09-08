@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore')
 hv.extension('bokeh')
 
 
-### Sigmoid
+# Sigmoid
 class Sigmoid(pm.Parameterized):
     """
     A parameterized class to represent sigmoid curve.
@@ -71,29 +71,29 @@ class Sigmoid(pm.Parameterized):
     """
 
     l = pm.Number(20.8, bounds=(0, 100), precedence=-1)
-    s = pm.Number(17, bounds=(1,20), precedence=-1)
+    s = pm.Number(17, bounds=(1, 20), precedence=-1)
     m = pm.Number(21e6, bounds=(1, 21e6), step=50000, precedence=-1)
     k = pm.Number(57300, bounds=(1, 1e5), step=100, precedence=-1)
-    steps = pm.Integer(1000, bounds=(10,10000), step=10, precedence=-1)
-    zoom = pm.Number(0.03, bounds=(0.01,1),step=0.01)
+    steps = pm.Integer(1000, bounds=(10, 10000), step=10, precedence=-1)
+    zoom = pm.Number(0.03, bounds=(0.01, 1), step=0.01)
     current_supply = pm.Number(10000, step=1000)
 
     def __init__(self, **params):
         super(Sigmoid, self).__init__(**params)
-        self.param['current_supply'].bounds = (1,self.m*self.zoom)
+        self.param['current_supply'].bounds = (1, self.m*self.zoom)
 
     def f(self, x):
         """Parameterized Sigmoid Function"""
-        self.param['current_supply'].bounds = (1,self.m*self.zoom)
+        self.param['current_supply'].bounds = (1, self.m*self.zoom)
         return self.k/(1+np.exp(-x*self.l/self.m+self.s))
 
     def x(self):
-        x = np.linspace(0,self.m*self.zoom, self.steps)
+        x = np.linspace(0, self.m*self.zoom, self.steps)
         return x
 
     def curve(self, x):
         y = self.f(x)
-        return pd.DataFrame(zip(x,y),columns=['supply','price'])
+        return pd.DataFrame(zip(x, y), columns=['supply', 'price'])
 
     def collateral(self, x):
         df = self.curve(x)
@@ -101,17 +101,17 @@ class Sigmoid(pm.Parameterized):
 
     def view_curve(self):
         x = self.x()
-        return self.curve(x).hvplot.line(title='Bonding Curve', x='supply',y='price')
+        return self.curve(x).hvplot.line(title='Bonding Curve', x='supply', y='price')
 
     def view_collateral(self):
         x = self.x()
-        return self.collateral(x).hvplot.area(x='supply',y='price')
+        return self.collateral(x).hvplot.area(x='supply', y='price')
 
     def view(self):
         return self.view_curve()*self.view_collateral()
 
 
-### Multisigmoid
+# Multisigmoid
 class MultiSigmoid(Sigmoid):
     """
     A parameterized class to represent a Multi-Sigmoid curve that inherits
@@ -148,23 +148,23 @@ class MultiSigmoid(Sigmoid):
 
     """
     l2 = pm.Number(2, bounds=(0, 100), precedence=-1)
-    s2 = pm.Number(5, bounds=(1,20), precedence=-1)
+    s2 = pm.Number(5, bounds=(1, 20), precedence=-1)
     m2 = pm.Number(5e4, bounds=(1, 21e6), step=50000, precedence=-1)
     k2 = pm.Number(5, bounds=(1, 1000), step=1, precedence=-1)
 
     l3 = pm.Number(2, bounds=(0, 100), precedence=-1)
-    s3 = pm.Number(5, bounds=(1,20), precedence=-1)
+    s3 = pm.Number(5, bounds=(1, 20), precedence=-1)
     m3 = pm.Number(5e5, bounds=(1, 21e6), step=50000, precedence=-1)
     k3 = pm.Number(50, bounds=(1, 21e6), step=100, precedence=-1)
 
     l4 = pm.Number(6, bounds=(0, 100), precedence=-1)
-    s4 = pm.Number(9, bounds=(1,20), precedence=-1)
+    s4 = pm.Number(9, bounds=(1, 20), precedence=-1)
     m4 = pm.Number(5e6, bounds=(1, 21e6), step=50000, precedence=-1)
     k4 = pm.Number(2e3, bounds=(1, 21e6), step=100, precedence=-1)
 
     def __init__(self, **params):
         super(MultiSigmoid, self).__init__(**params)
-        self.param['current_supply'].bounds = (1,self.m*self.zoom)
+        self.param['current_supply'].bounds = (1, self.m*self.zoom)
 
     def f2(self, x):
         return self.k2/(1+np.exp(-x*self.l2/self.m2+self.s2))
@@ -183,7 +183,7 @@ class MultiSigmoid(Sigmoid):
         return super(MultiSigmoid, self).f(x) + self.f2(x) + self.f3(x) + self.f4(x)
 
 
-### Augumented
+# Augumented
 class Augmented(MultiSigmoid):
     """
     A parameterized class to model the Augmented MultiSigmoid bonding Curve.
@@ -217,7 +217,7 @@ class Augmented(MultiSigmoid):
 
     def curve(self, x):
         y = self.f(x)
-        curve = pd.DataFrame(zip(x,y),columns=['supply','price'])
+        curve = pd.DataFrame(zip(x, y), columns=['supply', 'price'])
         curve['sell_price'] = curve['price'] * self.reserve_rate
         curve['minted'] = curve['supply'].diff()
         curve['reserve'] = curve['sell_price']*curve['minted']
@@ -228,11 +228,11 @@ class Augmented(MultiSigmoid):
         x = self.x()
         reserves = self.collateral(x)
         reserves['net'] = reserves['funding'] + reserves['reserve']
-        return reserves[['funding','reserve', 'net']].sum()
+        return reserves[['funding', 'reserve', 'net']].sum()
 
     def view_collateral(self):
         x = self.x()
-        return self.collateral(x).rename(columns={'price':'funding_price','sell_price':'reserve_price'}).hvplot.area(x='supply', y=['funding_price','reserve_price'], stacked=False, alpha=1)
+        return self.collateral(x).rename(columns={'price': 'funding_price', 'sell_price': 'reserve_price'}).hvplot.area(x='supply', y=['funding_price', 'reserve_price'], stacked=False, alpha=1)
 
     def view_reserves(self):
         r = self.reserves().to_frame()
@@ -241,7 +241,7 @@ class Augmented(MultiSigmoid):
         return r
 
 
-### Smart
+# Smart
 class Smart(Augmented):
     """
     A parameterized class to model the Smart augmented MultiSigmoid bonding Curve.
@@ -265,7 +265,7 @@ class Smart(Augmented):
        .bfill() from pandas
 
     """
-    reserve_power = pm.Integer(4, bounds=(0,4))
+    reserve_power = pm.Integer(4, bounds=(0, 4))
 
     def __init__(self, **params):
         super(Smart, self).__init__(**params)
@@ -275,7 +275,8 @@ class Smart(Augmented):
     def collateral(self, x):
         curve = self.curve(x)
         curve = curve[curve['supply'] < self.current_supply]
-        reserve_rate = np.power(np.linspace(0,1,len(curve)), self.reserve_power) * self.reserve_rate
+        reserve_rate = np.power(np.linspace(
+            0, 1, len(curve)), self.reserve_power) * self.reserve_rate
         curve['sell_price'] = curve['price'] * reserve_rate
         curve['minted'] = curve['supply'].diff()
         curve['reserve'] = curve['sell_price']*curve['minted']
@@ -284,43 +285,46 @@ class Smart(Augmented):
 
     def curve(self, x):
         y = self.f(x)
-        curve = pd.DataFrame(zip(x,y),columns=['supply','price'])
+        curve = pd.DataFrame(zip(x, y), columns=['supply', 'price'])
         return curve.bfill()
 
 
-
-## Token Engineering
+# Token Engineering
 class TokenEngineering(pm.Parameterized):
-    monthly_salary = pm.Integer(5000, bounds=(1500,5000), step=500)
+    monthly_salary = pm.Integer(5000, bounds=(1500, 5000), step=500)
     number_employees = pm.Integer(7, bounds=(3, 12), step=1)
     number_months = pm.Integer(24, bounds=(3, 24), step=1)
     monthly_contract_size = pm.Integer(7500, bounds=(6000, 10000), step=50)
     number_of_initial_contracts = pm.Integer(2, bounds=(1, 10), step=1)
     new_contracts_per_month = pm.Number(0.33, bounds=(0, 3), step=0.33)
-    office_expense = pm.Integer(7000, bounds=(3000,7000), step=50)
+    office_expense = pm.Integer(7000, bounds=(3000, 7000), step=50)
 
     def salary_costs(self):
-        cummulative = [i*self.number_employees*self.monthly_salary for i in range(self.number_months)]
+        cummulative = [i*self.number_employees *
+                       self.monthly_salary for i in range(self.number_months)]
         return cummulative
 
     def office_expenses(self):
-        cummulative = [i*self.office_expense for i in range(self.number_months)]
+        cummulative = [
+            i*self.office_expense for i in range(self.number_months)]
         return cummulative
 
     def costs(self):
-        return [a+b for a,b in zip(self.salary_costs(), self.office_expenses())]
+        return [a+b for a, b in zip(self.salary_costs(), self.office_expenses())]
 
     def number_of_contracts(self):
-        cummulative = [i*self.new_contracts_per_month + self.number_of_initial_contracts for i in range(self.number_months)]
+        cummulative = [i*self.new_contracts_per_month +
+                       self.number_of_initial_contracts for i in range(self.number_months)]
         return cummulative
 
     def contract_revenue(self):
         number_of_contracts = self.number_of_contracts()
-        cummulative = [i*self.monthly_contract_size*number_of_contracts[i] for i in range(self.number_months)]
+        cummulative = [i*self.monthly_contract_size*number_of_contracts[i]
+                       for i in range(self.number_months)]
         return cummulative
 
     def ltf_treasury(self):
-        return [a-b for a,b in zip(self.contract_revenue(),self.costs())]
+        return [a-b for a, b in zip(self.contract_revenue(), self.costs())]
 
     def cummulative_data(self):
         data = pd.DataFrame({
@@ -345,7 +349,7 @@ class TokenEngineering(pm.Parameterized):
         return lambda te: pn.Row(te, pn.Column(te.chart_view, te.results_view))
 
 
-### Bonding Curve
+# Bonding Curve
 
 class Bonding(Smart):
 
@@ -366,7 +370,8 @@ class Bonding(Smart):
         if batch_available < tol:
             self.current_supply += tol
             return self.mint(CAD)
-        print("CAD:", CAD, 'Price:', current_price, 'Request:', requested, 'Batch Available:', batch_available)
+        print("CAD:", CAD, 'Price:', current_price, 'Request:',
+              requested, 'Batch Available:', batch_available)
 
         if requested <= batch_available:
             self.current_supply += requested
@@ -375,25 +380,26 @@ class Bonding(Smart):
 
         else:
             self.current_supply += batch_available
-            next_received, next_price =  self.mint(current_price*(requested-batch_available))
+            next_received, next_price = self.mint(
+                current_price*(requested-batch_available))
             total_received = next_received + batch_available
-            weighted_price = current_price*(batch_available/total_received) + next_price*(next_received/total_received)
+            weighted_price = current_price * \
+                (batch_available/total_received) + \
+                next_price*(next_received/total_received)
             return total_received, weighted_price
-
 
     def view_market(self):
         df = pd.DataFrame({
-            'price' : self.current_price(),
-            'supply' : int(self.current_supply),
-            'marketcap' : self.current_price() * self.current_supply,
-        },index=['LTT'])
+            'price': self.current_price(),
+            'supply': int(self.current_supply),
+            'marketcap': self.current_price() * self.current_supply,
+        }, index=['LTT'])
         df['price'] = df['price'].apply(lambda x: "${:,.2f}".format(x))
         df['marketcap'] = df['marketcap'].apply(lambda x: "${:,.0f}".format(x))
         return df.T
 
     def view_abc(self):
-        return lambda abc: pn.Row(abc,pn.Column(abc.view, pn.Row(abc.view_reserves, abc.view_market)))
-
+        return lambda abc: pn.Row(abc, pn.Column(abc.view, pn.Row(abc.view_reserves, abc.view_market)))
 
 
 # ### The Augmented Bonding Curve
@@ -411,7 +417,8 @@ class Corporate(Bonding):
 
     def collateral(self, x):
         collateral = super(Corporate, self).collateral(x)
-        collateral['price'] = np.where(collateral['funding'].cumsum() < self.debt, 0, collateral['price'])
+        collateral['price'] = np.where(
+            collateral['funding'].cumsum() < self.debt, 0, collateral['price'])
         return collateral
 
     @pm.depends('debt', watch=True)
@@ -419,19 +426,19 @@ class Corporate(Bonding):
         x = self.x()
         reserves = self.collateral(x)
         reserves['net'] = reserves['funding'] + reserves['reserve']
-        reserves = reserves[['funding','reserve', 'net']].sum()
+        reserves = reserves[['funding', 'reserve', 'net']].sum()
         reserves['debt'] = self.debt
         reserves['net'] = reserves['net'] - self.debt
-        return reserves[['funding','debt','reserve','net']]
+        return reserves[['funding', 'debt', 'reserve', 'net']]
 
     @pm.depends('current_supply', watch=True)
     def update_debt_bounds(self):
-        self.param['debt'].bounds = (0,self.reserves()['funding'])
+        self.param['debt'].bounds = (0, self.reserves()['funding'])
 
 
 class SineWave(pm.Parameterized):
     '''
-    Tool for plotting Sine functions using Plotly and Python Panel
+    Docstring
     '''
     y_intercept = pm.Number(0)
     amplitude = pm.Number(1)
@@ -447,8 +454,7 @@ class SineWave(pm.Parameterized):
                  rotation: float = 0.7):
         super().__init__()
         '''
-        Class can be instantiated with custom values, or also with no arguments.
-        Defaults are provided.
+        Docstring
         '''
         self.y_intercept = y_intercept
         self.amplitude = amplitude
@@ -458,8 +464,7 @@ class SineWave(pm.Parameterized):
 
     def show_controls(self):
         '''
-        This function is necessary in Jupyter Notebook
-        to display the adjustable parameters.
+        Docstring
         '''
 
         return pn.Column(
@@ -467,9 +472,13 @@ class SineWave(pm.Parameterized):
             self.param.amplitude,
             self.param.period,
             self.param.rotation
-
         )
 
+    @pm.depends('y_intercept',
+                'amplitude',
+                'period',
+                'plot_range',
+                'rotation')
     def xy_cols(self):
         '''
         If we just want the two columns of the x and y
@@ -484,10 +493,15 @@ class SineWave(pm.Parameterized):
         t = np.linspace(0, self.plot_range, self.plot_range + 1)
 
         x = np.cos(a)*(t/b) - np.sin(a) * np.sin(t/b) * c
-        y = np.sin(a)*t/b + np.cos(a)*np.sin(t/b) + self.y_intercept * c
+        y = np.sin(a)*t/b + (np.cos(a)*np.sin(t/b) * c) + self.y_intercept
 
         return x, y
 
+    @pm.depends('y_intercept',
+                'amplitude',
+                'period',
+                'plot_range',
+                'rotation')
     def data_frame(self):
         '''
         Same purpose as xy_cols, but if we want the data as a Pandas
@@ -498,6 +512,11 @@ class SineWave(pm.Parameterized):
 
         return sine_dataframe
 
+    @pm.depends('y_intercept',
+                'amplitude',
+                'period',
+                'plot_range',
+                'rotation')
     def plot(self):
         '''
         Asks for the dataframe so it can be plotted.
@@ -507,4 +526,3 @@ class SineWave(pm.Parameterized):
 
         sine_plot = self.data_frame()
         return px.line(sine_plot, x="x", y=['y'])
-
