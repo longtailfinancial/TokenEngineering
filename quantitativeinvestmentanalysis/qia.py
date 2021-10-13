@@ -28,7 +28,7 @@ class InterestRate(pm.Parameterized):
             versus future real consumption.""",
     )
     inflation_premium = pm.Number(
-        0, bounds=(0, 1), step=0.01, precedence=1,
+        0, step=0.01, precedence=1,
         doc="""The inflation premium compensates investors for expected
             inflation and reflects the average inflation rate expected over the
             maturity of the debt. Inflation reduces the purchasing power of a unit
