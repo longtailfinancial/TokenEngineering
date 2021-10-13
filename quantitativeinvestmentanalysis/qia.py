@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import hvplot.pandas
 import holoviews as hv
-import param as pm 
+import param as pm
 import random
 import math
 
@@ -79,7 +79,7 @@ class CashFlow(pm.Parameterized):
         doc="""Present value of the investment.""")
 
     annuity = pm.Number(
-        10, bounds=(0, None), step=1, precedence=1,
+        10, step=1, precedence=1,
         doc="""A finite set of level sequential cash flows.""")
 
     perpetuity = pm.Boolean(
@@ -87,7 +87,7 @@ class CashFlow(pm.Parameterized):
         doc="""Is the annuity an infinite series (like a dividend on a stock)?""")
 
     N = pm.Integer(
-        1, bounds=(0,100), step=1, precedence=1,
+        1, bounds=(0, 100), step=1, precedence=1,
         doc="""Number of periods""")
 
     def __init__(self, interest_rate, **params):
@@ -104,7 +104,8 @@ class CashFlow(pm.Parameterized):
         return self._future_lump_value(self.N)
 
     def _future_annuity_value(self, t):
-        value = self.annuity * ((1 + self.effective_rate())**t - 1) / self.effective_rate()
+        value = self.annuity * ((1 + self.effective_rate())
+                                ** t - 1) / self.effective_rate()
         if self.perpetuity:
             value += self.perpetuity_value()
         return value
@@ -119,7 +120,7 @@ class CashFlow(pm.Parameterized):
         return self._present_value_factor(self.N)
 
     def _present_annuity_value(self, t):
-        return self.annuity * ((1 -  1/(1+self.effective_rate())**t)/self.effective_rate())
+        return self.annuity * ((1 - 1/(1+self.effective_rate())**t)/self.effective_rate())
 
     def present_annuity_value(self):
         return self._present_annuity_value(self.N)
@@ -138,11 +139,11 @@ class CashFlow(pm.Parameterized):
 
     def cash_flow(self):
         cash_flow = pd.DataFrame([{
-                'Time Period':t,
-                'Lump Value': self._future_lump_value(t),
-                'Annuity Value': self._future_annuity_value(t),
-                'Total Value': self._total_future_value(t),
-            } for t in range(self.N+1)])
+            'Time Period': t,
+            'Lump Value': self._future_lump_value(t),
+            'Annuity Value': self._future_annuity_value(t),
+            'Total Value': self._total_future_value(t),
+        } for t in range(self.N+1)])
         cash_flow['Cash Flow'] = cash_flow['Total Value'].diff().fillna(0)
         return cash_flow
 
@@ -172,11 +173,12 @@ class CashFlow(pm.Parameterized):
             'Total Present Value:',
             self.total_present_value,
         ), pn.Column(self.view_cash_flow, self.view_cash_flow_chart),
-      )
+        )
+
 
 class CompoundingCashFlow(CashFlow):
     compound_periods = pm.Integer(
-        1, bounds=(1,None), step=1, precedence=1,
+        1, bounds=(1, None), step=1, precedence=1,
         doc="""Number compounding periods in a period.""")
 
     def periodic_interest_rate(self):
@@ -190,7 +192,6 @@ class CompoundingCashFlow(CashFlow):
 
     def future_lump_value(self):
         return self.present_value * (1 + self.periodic_interest_rate())**(self.total_compound_periods())
-
 
 
 class ContinuousCompoundingCashFlow(CashFlow):
@@ -242,6 +243,7 @@ The steps in computing NPV and applying the NPV rule are as follows:
 5. Apply the NPV rule: if the investment's NPV is positive, an investor should undertake it; if the NPV is negative, the investor should not undertake it. If an investor must choose one project over another, they will choose the one with higher NPV.
 """
 
+
 class NetPresentValue(pm.Parameterized):
     cashflows = pm.ListSelector(default=[], objects=[])
 
@@ -249,4 +251,3 @@ class NetPresentValue(pm.Parameterized):
         self.discount_rate = discount_rate
         self.cash_flows = cash_flows
         super(NetPresentValue, self).__init__(**params)
-
