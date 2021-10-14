@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import hvplot.pandas
 import holoviews as hv
-import param as pm 
+import param as pm
 import random
 import math
 
@@ -28,7 +28,7 @@ class InterestRate(pm.Parameterized):
             versus future real consumption.""",
     )
     inflation_premium = pm.Number(
-        0, bounds=(0, 1), step=0.01, precedence=1,
+        0, step=0.01, precedence=1,
         doc="""The inflation premium compensates investors for expected
             inflation and reflects the average inflation rate expected over the
             maturity of the debt. Inflation reduces the purchasing power of a unit
@@ -79,7 +79,7 @@ class CashFlow(pm.Parameterized):
         doc="""Present value of the investment.""")
 
     annuity = pm.Number(
-        10, bounds=(0, None), step=1, precedence=1,
+        10, step=1, precedence=1,
         doc="""A finite set of level sequential cash flows.""")
 
     perpetuity = pm.Boolean(
@@ -87,7 +87,7 @@ class CashFlow(pm.Parameterized):
         doc="""Is the annuity an infinite series (like a dividend on a stock)?""")
 
     N = pm.Integer(
-        1, bounds=(0,100), step=1, precedence=1,
+        1, bounds=(0, 100), step=1, precedence=1,
         doc="""Number of periods""")
 
     def __init__(self, interest_rate, **params):
@@ -104,7 +104,8 @@ class CashFlow(pm.Parameterized):
         return self._future_lump_value(self.N)
 
     def _future_annuity_value(self, t):
-        value = self.annuity * ((1 + self.effective_rate())**t - 1) / self.effective_rate()
+        value = self.annuity * ((1 + self.effective_rate())
+                                ** t - 1) / self.effective_rate()
         if self.perpetuity:
             value += self.perpetuity_value()
         return value
@@ -119,7 +120,7 @@ class CashFlow(pm.Parameterized):
         return self._present_value_factor(self.N)
 
     def _present_annuity_value(self, t):
-        return self.annuity * ((1 -  1/(1+self.effective_rate())**t)/self.effective_rate())
+        return self.annuity * ((1 - 1/(1+self.effective_rate())**t)/self.effective_rate())
 
     def present_annuity_value(self):
         return self._present_annuity_value(self.N)
@@ -138,11 +139,11 @@ class CashFlow(pm.Parameterized):
 
     def cash_flow(self):
         cash_flow = pd.DataFrame([{
-                'Time Period':t,
-                'Lump Value': self._future_lump_value(t),
-                'Annuity Value': self._future_annuity_value(t),
-                'Total Value': self._total_future_value(t),
-            } for t in range(self.N+1)])
+            'Time Period': t,
+            'Lump Value': self._future_lump_value(t),
+            'Annuity Value': self._future_annuity_value(t),
+            'Total Value': self._total_future_value(t),
+        } for t in range(self.N+1)])
         cash_flow['Cash Flow'] = cash_flow['Total Value'].diff().fillna(0)
         return cash_flow
 
@@ -172,11 +173,12 @@ class CashFlow(pm.Parameterized):
             'Total Present Value:',
             self.total_present_value,
         ), pn.Column(self.view_cash_flow, self.view_cash_flow_chart),
-      )
+        )
+
 
 class CompoundingCashFlow(CashFlow):
     compound_periods = pm.Integer(
-        1, bounds=(1,None), step=1, precedence=1,
+        1, bounds=(1, None), step=1, precedence=1,
         doc="""Number compounding periods in a period.""")
 
     def periodic_interest_rate(self):
@@ -190,7 +192,6 @@ class CompoundingCashFlow(CashFlow):
 
     def future_lump_value(self):
         return self.present_value * (1 + self.periodic_interest_rate())**(self.total_compound_periods())
-
 
 
 class ContinuousCompoundingCashFlow(CashFlow):
@@ -207,33 +208,24 @@ class ContinuousCompoundingCashFlow(CashFlow):
 
 """
 2.0 Net Present Value and Internal Rate of Return
-
 There are three chief areas of financial decision-making in most businesses. 
-
 Capital Budgeting is the allocation of funds to relatively long-range projects
 or investements. 
-
 From the perspective of capital budgeting, a company is a portfolio of projects
 and investments. 
-
 Capital structure is the choice of long-term financing for the investments the
 company wants to make.
-
 Working Capital Management is the management of the company's short-term assets
 (such as inventory) and short-term liabilities (such as money owed to
 suppliers).
-
 2.1 Net Present Value and the Net Present Value Rule
-
 Net present value (NPV) describes a way to characterize the value of an
 investment, and the net present value rule is a method for choosing among
 alternative investments. 
-
 The net present value of an investment is the present value of its cash inflows
 minus the present value of its cash outflows. The word "net" in an NPV refers
 to subtracting the present value of the investments outflows (costs) from the
 present value of its inflows (benefits) to arrive at the net benefit.
-
 The steps in computing NPV and applying the NPV rule are as follows:
 1. Identify all cash flows associated with the investment - all inflows and outflows.
 2. Determine the appropriate discount rate or opportunity cost, r, for the investment project
@@ -242,6 +234,7 @@ The steps in computing NPV and applying the NPV rule are as follows:
 5. Apply the NPV rule: if the investment's NPV is positive, an investor should undertake it; if the NPV is negative, the investor should not undertake it. If an investor must choose one project over another, they will choose the one with higher NPV.
 """
 
+
 class NetPresentValue(pm.Parameterized):
     cashflows = pm.ListSelector(default=[], objects=[])
 
@@ -249,4 +242,3 @@ class NetPresentValue(pm.Parameterized):
         self.discount_rate = discount_rate
         self.cash_flows = cash_flows
         super(NetPresentValue, self).__init__(**params)
-
