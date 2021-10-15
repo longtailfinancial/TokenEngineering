@@ -15,6 +15,24 @@ import plotly.express as px
 warnings.filterwarnings('ignore')
 hv.extension('bokeh')
 
+class ReserveRatio(pm.Parameterized):
+    """
+    This model simulates bancor style model with reserve ratio
+    """
+    reserve_ratio = pm.Number(0.35, bounds=(0,1), step=0.01)
+    price = pm.Number(100, bounds=(0,1000), step=0.1)
+    supply = pm.Number(100, bounds=(0,1000), step=0.1)
+    
+    def x(self):
+        return np.linspace(0, self.supply, 1000)
+    
+    def curve(self, x):
+        y = (x**((1/self.reserve_ratio)-1) * self.price) / (self.supply**((1/self.reserve_ratio)-1))
+        return pd.DataFrame(zip(x,y),columns=['supply','price'])
+    
+    def view(self):
+        curve = self.curve(self.x())
+        return curve.hvplot.line(x='supply',y='price', line_width=6)        
 
 # Sigmoid
 class Sigmoid(pm.Parameterized):
@@ -526,3 +544,136 @@ class SineWave(pm.Parameterized):
 
         sine_plot = self.data_frame()
         return px.line(sine_plot, x="x", y=['y'])
+
+## Modified from https://github.com/CommonsBuild/commons-config-dashboard/blob/development/models/notebooks/Bonding_Curve_Calculator.ipynb
+
+class BondingCurveInitializer(pm.Parameterized):
+    """This class initializes the bonding curve.
+
+    Default Params:
+    ----------------
+        initial price (float): initial token price
+
+        initial supply (int): initial token supply ex: ETH
+
+        initial balance (int): initial collateral balance ex: USDT
+
+    Functions:
+    --------
+        view: returns the complete dashboard pane view of the model
+    """
+
+    initial_price = pm.Number(1, bounds=(0.1,10), step=0.1)
+    initial_supply = pm.Number(3000, bounds=(1,10000), step=10)
+    initial_balance = pm.Number(1000, bounds=(1,10000), step=10)
+
+    def reserve_ratio(self):
+        return self.initial_balance / (self.initial_price * self.initial_supply)
+    
+    #Returns the token price given a specific supply
+    def get_price(self, supply):
+        return (supply ** ((1 / self.reserve_ratio()) - 1) * self.initial_price) / (
+            self.initial_supply ** ((1 / self.reserve_ratio()) - 1)
+        )
+
+    #Returns the collateral balance price given a specific supply
+    def get_balance(self, supply):
+        return (
+            self.reserve_ratio() * self.get_price(supply) * supply
+        )
+    
+    #For drawing the bonding curve. Range shows how many times the initial supply you make the graph for, steps: how many subdivisions
+    def curve_over_supply(self, range=1000, steps=10000):
+        x = np.linspace(0, range, steps)
+        y = self.get_price(x)
+        return pd.DataFrame(zip(x, y), columns=["Supply", "Price"])
+    
+    def curve_over_balance(self, range=1000, steps=10000):
+        supply_list = np.linspace(0, range, steps)
+        x = self.get_balance(supply_list)
+        y = self.get_price(supply_list)
+
+        return pd.DataFrame(zip(x, y), columns=["Balance", "Price"])
+    
+    def initial_point(self):
+        points = hv.Points((self.initial_supply,self.initial_price))
+        return points.opts(color='k', size=7)
+    
+    def outputs(self):
+        return "Reserve Ratio: {0:.2f}".format(self.reserve_ratio())
+    
+    def plot_curve(self):
+        hv.extension('bokeh')
+        curve = self.curve_over_supply(range=self.initial_supply*6)
+        return curve.hvplot.line(x='Supply', y='Price', line_width=4) * self.initial_point()
+    
+    def view(self):
+        return pn.Row(pn.Column(self.param, self.outputs), self.plot_curve)
+
+class BondingCurve(BondingCurveInitializer):
+    """This class is inherited from the BondingCurveInitializer class.
+    Additionally, it help manage current and max token supply
+
+    Functions:
+    --------
+        view: returns the complete dashboard pane view of the model
+    """
+    
+    supply = pm.Range(default=(5000, 20000), bounds=(0, 50000), label='Current Supply : Max Supply')# current supply, Max Supply
+    
+    #Returns how much USDT you get from selling Token X 
+    def sale_return(self, bonded):
+        return self.get_balance(self.supply[0]) * (
+            (bonded / self.supply[0] + 1) ** (1 / self.reserve_ratio()) - 1
+        )
+
+    #Returns how much Token X you get from purchasing with USDT
+    def purchase_return(self, collateral):
+        return self.supply[0] * (
+            (collateral / self.get_balance(self.supply[0]) + 1) ** (self.reserve_ratio()) - 1
+        )
+    
+    def current_point(self):
+        points = hv.Points((self.supply[0],self.get_price(self.supply[0])))
+        return points.opts(color='red', size=7)
+
+    def outputs(self):
+        return "Reserve Ratio: {0:.2f}\n\rInitial price: {1:.2f}\n\rCurrent price: {2:.2f}".format(self.reserve_ratio(),self.initial_price,self.get_price(self.supply[0]))
+
+    def plot_curve(self):
+        hv.extension('bokeh')
+        curve = self.curve_over_supply(range=self.supply[1])
+        return curve.hvplot.line(x='Supply', y='Price', line_width=4) * self.initial_point() * self.current_point()
+    
+    def view(self):
+        return pn.Row(pn.Column(self.param, self.outputs), self.plot_curve)
+
+class BondingCurveCalculator(BondingCurve):
+    """This class is inherited from the BondingCurve class.
+    Additionally, it offers the ability to calculate the change in token price and token supply with change in supply
+
+    Functions:
+    --------
+        view: returns the complete dashboard pane view of the model
+    """
+    
+    amount = pm.Number(0, bounds=(-1000, 1000), label='Change in Token Supply')
+    
+    def new_supply(self):
+        return max(0, min(self.supply[0] + self.purchase_return(self.sale_return(self.amount)), self.supply[1]))
+
+    def new_point(self):
+        new_supply = self.new_supply()
+        points = hv.Points((new_supply, self.get_price(new_supply)))
+        return points.opts(color='green', size=7)
+    
+    def outputs(self):
+        return "Reserve Ratio: {0:.2f}\n\rInitial price: {1:.2f}\n\rCurrent price: {2:.2f}\n\rIf Token supply is changed by {5:.2f}:\n\r New price: {3:.2f}\n\rNew Supply: {4:.2f}".format(self.reserve_ratio(), self.initial_price, self.get_price(self.supply[0]), self.get_price(self.new_supply()), self.new_supply(), self.amount)
+
+    def plot_curve(self):
+        hv.extension('bokeh')
+        curve = self.curve_over_supply(range=self.supply[1])
+        return curve.hvplot.line(x='Supply', y='Price', line_width=4) * self.current_point() * self.new_point() * self.initial_point()
+    
+    def view(self):
+        return pn.Row(pn.Column(self.param, self.outputs), self.plot_curve)
