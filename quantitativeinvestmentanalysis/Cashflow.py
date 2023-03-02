@@ -74,11 +74,12 @@ class CashFlow(pm.Parameterized):
 
     def present_value_factor(self):
         return self._present_value_factor(self.N)
-
-    def _present_annuity_value(self, t):
-        return self.annuity * (
-            (1 - 1 / (1 + self.effective_rate()) ** t) / self.effective_rate()
-        )
+    
+    def _present_annuity_value(self, t): 
+        value = self.annuity * ((1 - 1/(1+self.effective_rate())**t)/self.effective_rate())
+        if self.perpetuity:
+            value += self.perpetuity_value()
+        return value
 
     def present_annuity_value(self):
         return self._present_annuity_value(self.N)
